@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-microchip"></i></div>
+        <div class="stat-info">
+            <h3>Avg CPU</h3>
+            <div class="stat-value" id="avgCpu">--%</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-memory"></i></div>
+        <div class="stat-info">
+            <h3>Avg Memory</h3>
+            <div class="stat-value" id="avgMem">--%</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+        <div class="stat-info">
+            <h3>Uptime</h3>
+            <div class="stat-value">99.9%</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-waveform"></i></div>
+        <div class="stat-info">
+            <h3>Latency</h3>
+            <div class="stat-value">2.3ms</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2><i class="fas fa-chart-line"></i> Live Device Monitoring</h2>
+        <span class="status-badge status-up">Auto-refresh: 5s</span>
+    </div>
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Device</th>
+                    <th>IP</th>
+                    <th>CPU</th>
+                    <th>Memory</th>
+                    <th>Status</th>
+                    <th>Last Seen</th>
+                </tr>
+            </thead>
+            <tbody id="monitorTable">
+                {% for device in devices %}
+                <tr>
+                    <td><strong>{{ device.name }}</strong></td>
+                    <td><code>{{ device.ip }}</code></td>
+                    <td id="cpu-{{ loop.index }}">{{ device.cpu }}%</td>
+                    <td id="mem-{{ loop.index }}">{{ device.mem }}%</td>
+                    <td id="status-{{ loop.index }}">
+                        {% if device.status == 'up' %}
+                        <span class="status-badge status-up">🟢 Active</span>
+                        {% else %}
+                        <span class="status-badge status-warning">⚠️ Warning</span>
+                        {% endif %}
+                    </td>
+                    <td id="time-{{ loop.index }}">Just now</td>
+                 </tr>
+                {% endfor %}
+            </tbody>
+         </table>
+    </div>
+</div>
+
+<script>
+let updateInterval;
+
+function updateMonitoring() {
+    fetch('/api/devices')
+        .then(res => res.json())
+        .then(devices => {
+            let totalCpu = 0;
+            let totalMem = 0;
+            let count = 0;
+            
+            devices.forEach((device, index) => {
+                if (device.status === 'up') {
+                    totalCpu += device.cpu;
+                    totalMem += device.mem;
+                    count++;
+                }
+                
+                const cpuElem = document.getElementById(`cpu-${index + 1}`);
+                const memElem = document.getElementById(`mem-${index + 1}`);
+                const statusElem = document.getElementById(`status-${index + 1}`);
+                const timeElem = document.getElementById(`time-${index + 1}`);
+                
+                if (cpuElem) cpuElem.innerText = device.cpu + '%';
+                if (memElem) memElem.innerText = device.mem + '%';
+                
+                if (statusElem) {
+                    if (device.status === 'up') {
+                        statusElem.innerHTML = '<span class="status-badge status-up">🟢 Active</span>';
+                    } else if (device.status === 'warning') {
+                        statusElem.innerHTML = '<span class="status-badge status-warning">⚠️ Warning</span>';
+                    } else {
+                        statusElem.innerHTML = '<span class="status-badge status-down">🔴 Down</span>';
+                    }
+                }
+                
+                if (timeElem) {
+                    timeElem.innerText = new Date().toLocaleTimeString();
+                }
+            });
+            
+            if (count > 0) {
+                document.getElementById('avgCpu').innerText = Math.round(totalCpu / count) + '%';
+                document.getElementById('avgMem').innerText = Math.round(totalMem / count) + '%';
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+updateMonitoring();
+updateInterval = setInterval(updateMonitoring, 5000);
+</script>
+{% endblock %}

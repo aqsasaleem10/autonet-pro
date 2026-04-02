@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-shield-alt"></i></div>
+        <div class="stat-info">
+            <h3>Compliance Score</h3>
+            <div class="stat-value">{{ stats.compliance_score }}%</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+        <div class="stat-info">
+            <h3>Passed</h3>
+            <div class="stat-value" style="color: #48bb78;">{{ stats.passed_checks }}</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="stat-info">
+            <h3>Warnings</h3>
+            <div class="stat-value" style="color: #ed8936;">{{ stats.warning_checks }}</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
+        <div class="stat-info">
+            <h3>Failed</h3>
+            <div class="stat-value" style="color: #e53e3e;">{{ stats.failed_checks }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2><i class="fas fa-clipboard-list"></i> Security Compliance Checks</h2>
+        <button class="btn btn-small" onclick="runAudit()">
+            <i class="fas fa-sync-alt"></i> Run Audit
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="progress-bar" style="margin-bottom: 20px;">
+            <div class="progress-fill" style="width: {{ stats.compliance_score }}%; background: {% if stats.compliance_score > 80 %}#48bb78{% elif stats.compliance_score > 50 %}#ed8936{% else %}#e53e3e{% endif %}"></div>
+        </div>
+        
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Check</th>
+                    <th>Status</th>
+                    <th>Message</th>
+                    <th>Severity</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for key, check in checks.items() %}
+                <tr>
+                    <td><strong>{{ check.name }}</strong></td>
+                    <td>
+                        {% if check.status == 'pass' %}
+                        <span class="status-badge status-pass">✓ PASS</span>
+                        {% elif check.status == 'warn' %}
+                        <span class="status-badge status-warn">⚠ WARNING</span>
+                        {% else %}
+                        <span class="status-badge status-fail">✗ FAIL</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ check.message }}</td>
+                    <td>
+                        {% if check.severity == 'high' %}
+                        <span style="color: #e53e3e;">High</span>
+                        {% elif check.severity == 'medium' %}
+                        <span style="color: #ed8936;">Medium</span>
+                        {% else %}
+                        <span style="color: #718096;">Low</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if check.status != 'pass' %}
+                        <button class="btn btn-small btn-secondary" onclick="remediate('{{ key }}')">
+                            Fix
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-terminal"></i> Remediation Commands</h3>
+    </div>
+    <div class="card-body">
+        <div id="remediationCommands" class="terminal">
+            <pre>! Run security audit to see remediation commands</pre>
+        </div>
+    </div>
+</div>
+
+<script>
+async function runAudit() {
+    showToast('Running security audit...', 'info');
+    
+    const response = await fetch('/api/compliance');
+    const data = await response.json();
+    
+    let commands = '';
+    for (const [key, check] of Object.entries(data.checks)) {
+        if (check.status !== 'pass') {
+            commands += `! Fix for ${check.name}\n`;
+            if (key === 'acl_configured') {
+                commands += `access-list 100 permit ip any any\ninterface gigabitEthernet 0/0\n ip access-group 100 in\n\n`;
+            } else if (key === 'port_security') {
+                commands += `interface range gigabitEthernet 0/2-3\n switchport port-security\n switchport port-security maximum 1\n switchport port-security violation shutdown\n\n`;
+            } else if (key === 'snmp_version') {
+                commands += `snmp-server community AutoNetRO RO\nsnmp-server host 10.0.0.100 version 3\n\n`;
+            }
+        }
+    }
+    
+    if (commands) {
+        document.getElementById('remediationCommands').innerHTML = `<pre>${commands}</pre>`;
+        showToast('Audit complete! Review remediation commands.', 'success');
+    } else {
+        document.getElementById('remediationCommands').innerHTML = `<pre>✅ All compliance checks passed!</pre>`;
+        showToast('Audit complete! All checks passed.', 'success');
+    }
+}
+
+function remediate(check) {
+    showToast(`Remediation started for ${check}...`, 'info');
+    runAudit();
+}
+</script>
+{% endblock %}

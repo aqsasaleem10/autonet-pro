@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2><i class="fas fa-server"></i> Network Devices</h2>
+        <button class="btn btn-small" onclick="refreshDevices()">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+    </div>
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Device Name</th>
+                    <th>IP Address</th>
+                    <th>Type</th>
+                    <th>VLAN</th>
+                    <th>CPU</th>
+                    <th>Memory</th>
+                    <th>Uptime</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for device in devices %}
+                <tr>
+                    <td><strong>{{ device.name }}</strong></td>
+                    <td><code>{{ device.ip }}</code></td>
+                    <td>{{ device.type }}</td>
+                    <td>{{ device.vlan }}</td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <div class="progress-bar" style="width: 50px;">
+                                <div class="progress-fill" style="width: {{ device.cpu }}%; background: {% if device.cpu > 70 %}#e53e3e{% elif device.cpu > 50 %}#ed8936{% else %}#48bb78{% endif %}"></div>
+                            </div>
+                            {{ device.cpu }}%
+                        </div>
+                    </td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <div class="progress-bar" style="width: 50px;">
+                                <div class="progress-fill" style="width: {{ device.mem }}%; background: #667eea"></div>
+                            </div>
+                            {{ device.mem }}%
+                        </div>
+                    </td>
+                    <td><span style="font-family: monospace;">{{ device.uptime }}</span></td>
+                    <td>
+                        {% if device.status == 'up' %}
+                        <span class="status-badge status-up">🟢 Active</span>
+                        {% elif device.status == 'warning' %}
+                        <span class="status-badge status-warning">⚠️ Warning</span>
+                        {% else %}
+                        <span class="status-badge status-down">🔴 Down</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button class="btn btn-small" onclick="pingDevice('{{ device.ip }}')">
+                            <i class="fas fa-play"></i> Ping
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-chart-pie"></i> Device Distribution</h3>
+    </div>
+    <div class="card-body">
+        <div class="grid-2">
+            <div>
+                <h4>By Type</h4>
+                <ul style="list-style: none; margin-top: 10px;">
+                    <li><span class="status-badge status-up">Router</span> - 2 devices</li>
+                    <li><span class="status-badge status-up">Switch</span> - 2 devices</li>
+                    <li><span class="status-badge status-up">PC</span> - 2 devices</li>
+                </ul>
+            </div>
+            <div>
+                <h4>By Status</h4>
+                <ul style="list-style: none; margin-top: 10px;">
+                    <li><span class="status-badge status-up">🟢 Active</span> - 5 devices</li>
+                    <li><span class="status-badge status-warning">⚠️ Warning</span> - 1 device</li>
+                    <li><span class="status-badge status-down">🔴 Down</span> - 0 devices</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function refreshDevices() {
+    location.reload();
+}
+
+function pingDevice(ip) {
+    window.location.href = '/ping?target=' + ip;
+}
+</script>
+{% endblock %}

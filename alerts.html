@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-bell"></i></div>
+        <div class="stat-info">
+            <h3>Active Alerts</h3>
+            <div class="stat-value" id="activeCount">{{ alerts|selectattr('acknowledged', 'equalto', false)|list|length }}</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-exclamation-circle"></i></div>
+        <div class="stat-info">
+            <h3>Critical</h3>
+            <div class="stat-value" style="color: #e53e3e;">{{ alerts|selectattr('severity', 'equalto', 'critical')|selectattr('acknowledged', 'equalto', false)|list|length }}</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="stat-info">
+            <h3>Warnings</h3>
+            <div class="stat-value" style="color: #ed8936;">{{ alerts|selectattr('severity', 'equalto', 'warning')|selectattr('acknowledged', 'equalto', false)|list|length }}</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-info-circle"></i></div>
+        <div class="stat-info">
+            <h3>Info</h3>
+            <div class="stat-value">{{ alerts|selectattr('severity', 'equalto', 'info')|selectattr('acknowledged', 'equalto', false)|list|length }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2><i class="fas fa-list"></i> Active Alerts</h2>
+        <button class="btn btn-small" onclick="clearAlerts()">
+            <i class="fas fa-check-double"></i> Clear All
+        </button>
+    </div>
+    <div class="card-body" id="alertsList">
+        {% for alert in alerts %}
+            {% if not alert.acknowledged %}
+            <div class="alert-item alert-{{ alert.severity }}">
+                <div class="alert-icon">
+                    {% if alert.severity == 'critical' %}
+                    <i class="fas fa-skull-crosswalk" style="color: #e53e3e;"></i>
+                    {% elif alert.severity == 'warning' %}
+                    <i class="fas fa-exclamation-triangle" style="color: #ed8936;"></i>
+                    {% else %}
+                    <i class="fas fa-info-circle" style="color: #4299e1;"></i>
+                    {% endif %}
+                </div>
+                <div style="flex: 1;">
+                    <div><strong>{{ alert.title }}</strong></div>
+                    <div style="font-size: 13px; color: #718096;">{{ alert.message }}</div>
+                </div>
+                <div style="font-size: 12px; color: #718096;">{{ alert.time }}</div>
+                <button class="btn btn-small btn-secondary" onclick="acknowledgeAlert({{ alert.id }})">
+                    Acknowledge
+                </button>
+            </div>
+            {% endif %}
+        {% endfor %}
+        
+        {% if alerts|selectattr('acknowledged', 'equalto', false)|list|length == 0 %}
+        <div style="text-align: center; padding: 40px; color: #718096;">
+            <i class="fas fa-check-circle" style="font-size: 48px; margin-bottom: 16px;"></i>
+            <p>No active alerts</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+async function acknowledgeAlert(alertId) {
+    const response = await fetch(`/api/alerts/${alertId}/acknowledge`, {method: 'POST'});
+    if (response.ok) {
+        location.reload();
+    }
+}
+
+async function clearAlerts() {
+    const response = await fetch('/api/alerts/clear', {method: 'POST'});
+    if (response.ok) {
+        location.reload();
+    }
+}
+</script>
+{% endblock %}

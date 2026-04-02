@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-database"></i></div>
+        <div class="stat-info">
+            <h3>Total Backups</h3>
+            <div class="stat-value">{{ backups|length }}</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+        <div class="stat-info">
+            <h3>Success Rate</h3>
+            <div class="stat-value">98.5%</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-hdd"></i></div>
+        <div class="stat-info">
+            <h3>Storage Used</h3>
+            <div class="stat-value">2.4 GB</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-clock"></i></div>
+        <div class="stat-info">
+            <h3>Last Backup</h3>
+            <div class="stat-value">2h ago</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2><i class="fas fa-history"></i> Backup History</h2>
+        <button class="btn btn-small" onclick="backupAll()">
+            <i class="fas fa-database"></i> Backup All
+        </button>
+    </div>
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Device</th>
+                    <th>Date</th>
+                    <th>Size</th>
+                    <th>Version</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                 </tr>
+            </thead>
+            <tbody>
+                {% for backup in backups %}
+                <tr>
+                    <td><strong>{{ backup.device }}</strong></td>
+                    <td>{{ backup.date }}</td>
+                    <td>{{ backup.size }}</td>
+                    <td>{{ backup.version }}</td>
+                    <td>
+                        {% if backup.status == 'success' %}
+                        <span class="status-badge status-pass">✓ Success</span>
+                        {% else %}
+                        <span class="status-badge status-warn">⚠ Warning</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button class="btn btn-small btn-secondary" onclick="restoreBackup({{ backup.id }})">
+                            <i class="fas fa-undo"></i> Restore
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-calendar-alt"></i> Schedule Backup</h3>
+    </div>
+    <div class="card-body">
+        <div class="grid-2">
+            <div>
+                <div class="form-group">
+                    <label>Frequency</label>
+                    <select id="frequency" class="form-control">
+                        <option>Every 6 hours</option>
+                        <option>Every 12 hours</option>
+                        <option>Daily</option>
+                        <option>Weekly</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <div class="form-group">
+                    <label>Retention Period</label>
+                    <select id="retention" class="form-control">
+                        <option>7 days</option>
+                        <option>30 days</option>
+                        <option>90 days</option>
+                        <option>1 year</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <button class="btn" onclick="saveSchedule()">
+            <i class="fas fa-save"></i> Save Schedule
+        </button>
+    </div>
+</div>
+
+<script>
+async function backupAll() {
+    showToast('Starting backup for all devices...', 'info');
+    
+    const response = await fetch('/api/backup', {method: 'POST'});
+    const data = await response.json();
+    
+    if (data.success) {
+        showToast('Backup completed successfully!', 'success');
+        setTimeout(() => location.reload(), 1500);
+    }
+}
+
+async function restoreBackup(backupId) {
+    if (confirm('Are you sure you want to restore this configuration?')) {
+        showToast('Restoring backup...', 'info');
+        
+        const response = await fetch(`/api/backup/${backupId}/restore`, {method: 'POST'});
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Backup restored successfully!', 'success');
+        }
+    }
+}
+
+function saveSchedule() {
+    const frequency = document.getElementById('frequency').value;
+    const retention = document.getElementById('retention').value;
+    
+    showToast(`Backup schedule saved: ${frequency}, ${retention} retention`, 'success');
+}
+</script>
+{% endblock %}

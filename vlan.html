@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2><i class="fas fa-layer-group"></i> VLAN Configuration</h2>
+    </div>
+    <div class="card-body">
+        <h3>Current VLANs</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>VLAN ID</th>
+                    <th>Name</th>
+                    <th>Network</th>
+                    <th>Gateway</th>
+                    <th>Type</th>
+                    <th>Devices</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for vlan in vlans %}
+                <tr>
+                    <td><span class="status-badge status-up">VLAN {{ vlan.id }}</span></td>
+                    <td><strong>{{ vlan.name }}</strong></td>
+                    <td><code>{{ vlan.network }}</code></td>
+                    <td><code>{{ vlan.gateway }}</code></td>
+                    <td>{{ vlan.type }}</td>
+                    <td>{{ vlan.devices }} devices</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-plus-circle"></i> Create New VLAN</h3>
+    </div>
+    <div class="card-body">
+        <div class="form-group">
+            <label>VLAN ID (2-4094)</label>
+            <input type="number" id="vlanId" class="form-control" placeholder="e.g., 30">
+        </div>
+        <div class="form-group">
+            <label>VLAN Name</label>
+            <input type="text" id="vlanName" class="form-control" placeholder="e.g., VLAN30">
+        </div>
+        <div class="form-group">
+            <label>Network (CIDR)</label>
+            <input type="text" id="network" class="form-control" placeholder="e.g., 192.168.30.0/24" value="192.168.30.0/24">
+        </div>
+        <div class="form-group">
+            <label>Gateway</label>
+            <input type="text" id="gateway" class="form-control" placeholder="e.g., 192.168.30.1" value="192.168.30.1">
+        </div>
+        <button class="btn" onclick="createVLAN()">
+            <i class="fas fa-plus"></i> Create VLAN
+        </button>
+        <div id="vlanResult" style="margin-top: 20px;"></div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-terminal"></i> Cisco VLAN Commands</h3>
+        <button class="btn btn-small" onclick="copyCommands()">
+            <i class="fas fa-copy"></i> Copy All
+        </button>
+    </div>
+    <div class="card-body">
+        <div id="ciscoCommands" class="terminal">
+            <pre>! ================================================
+! VLAN Configuration Commands
+! ================================================
+
+! Create VLANs
+vlan 10
+ name VLAN10
+!
+vlan 20
+ name VLAN20
+!
+! Assign ports to VLANs
+interface gigabitEthernet 0/2
+ switchport mode access
+ switchport access vlan 10
+!
+interface gigabitEthernet 0/3
+ switchport mode access
+ switchport access vlan 20
+!
+! Trunk configuration
+interface gigabitEthernet 0/1
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20
+!
+! Router sub-interfaces
+interface gigabitEthernet 0/0.10
+ encapsulation dot1Q 10
+ ip address 192.168.1.1 255.255.255.0
+!
+interface gigabitEthernet 0/0.20
+ encapsulation dot1Q 20
+ ip address 192.168.2.1 255.255.255.0</pre>
+        </div>
+    </div>
+</div>
+
+<script>
+async function createVLAN() {
+    const vlanId = document.getElementById('vlanId').value;
+    const vlanName = document.getElementById('vlanName').value;
+    const network = document.getElementById('network').value;
+    const gateway = document.getElementById('gateway').value;
+    const resultDiv = document.getElementById('vlanResult');
+    
+    if (!vlanId || !vlanName) {
+        showToast('Please enter VLAN ID and Name', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/vlan', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({vlan_id: vlanId, vlan_name: vlanName, network: network, gateway: gateway})
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="terminal" style="color: #48bb78;">
+                    <i class="fas fa-check-circle"></i> <strong>VLAN Created!</strong><br><br>
+                    VLAN ${data.vlan_id} - ${data.vlan_name}<br>
+                    Network: ${data.network}<br><br>
+                    <strong>Cisco Commands to apply:</strong><br>
+                    <pre>${data.commands.join('\n')}</pre>
+                </div>
+            `;
+            
+            document.getElementById('vlanId').value = '';
+            document.getElementById('vlanName').value = '';
+        }
+    } catch (error) {
+        resultDiv.innerHTML = `<div class="terminal" style="color: #e53e3e;">Error: ${error.message}</div>`;
+    }
+}
+
+function copyCommands() {
+    const commands = document.getElementById('ciscoCommands').innerText;
+    navigator.clipboard.writeText(commands);
+    showToast('Commands copied to clipboard!', 'success');
+}
+</script>
+{% endblock %}

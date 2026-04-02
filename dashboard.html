@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Stats Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-microchip"></i></div>
+        <div class="stat-info">
+            <h3>Total Devices</h3>
+            <div class="stat-value">{{ stats.total_devices }}</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+        <div class="stat-info">
+            <h3>Network Uptime</h3>
+            <div class="stat-value">{{ stats.uptime_percentage }}%</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-layer-group"></i></div>
+        <div class="stat-info">
+            <h3>Active VLANs</h3>
+            <div class="stat-value">{{ stats.total_vlans }}</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-shield-alt"></i></div>
+        <div class="stat-info">
+            <h3>Compliance Score</h3>
+            <div class="stat-value">{{ stats.compliance_score }}%</div>
+        </div>
+    </div>
+</div>
+
+<!-- Device Status -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-server"></i> Network Devices</h3>
+        <span class="status-badge status-up">Live</span>
+    </div>
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr><th>Device</th><th>IP Address</th><th>Type</th><th>VLAN</th><th>CPU</th><th>Status</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+                {% for device in devices %}
+                <tr>
+                    <td><strong>{{ device.name }}</strong></td>
+                    <td><code>{{ device.ip }}</code></td>
+                    <td>{{ device.type }}</td>
+                    <td>{{ device.vlan }}</td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div class="progress-bar" style="width: 60px;">
+                                <div class="progress-fill" style="width: {{ device.cpu }}%; background: {% if device.cpu > 70 %}#e53e3e{% elif device.cpu > 50 %}#ed8936{% else %}#48bb78{% endif %}"></div>
+                            </div>
+                            {{ device.cpu }}%
+                        </div>
+                    </td>
+                    <td>
+                        {% if device.status == 'up' %}
+                        <span class="status-badge status-up">🟢 Active</span>
+                        {% elif device.status == 'warning' %}
+                        <span class="status-badge status-warning">⚠️ Warning</span>
+                        {% else %}
+                        <span class="status-badge status-down">🔴 Down</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button class="btn btn-small" onclick="pingDevice('{{ device.ip }}')">
+                            <i class="fas fa-play"></i> Ping
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- VLAN Information & Quick Actions -->
+<div class="grid-2">
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-layer-group"></i> VLAN Configuration</h3>
+        </div>
+        <div class="card-body">
+            <table class="data-table">
+                <thead><tr><th>VLAN ID</th><th>Name</th><th>Network</th><th>Gateway</th></tr></thead>
+                <tbody>
+                    {% for vlan in vlans %}
+                    <tr>
+                        <td><span class="status-badge status-up">VLAN {{ vlan.id }}</span></td>
+                        <td>{{ vlan.name }}</td>
+                        <td><code>{{ vlan.network }}</code></td>
+                        <td><code>{{ vlan.gateway }}</code></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div style="margin-top: 16px;">
+                <a href="/vlan" class="btn btn-small">Manage VLANs →</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+        </div>
+        <div class="card-body">
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <a href="/config" class="btn" style="text-align: center; text-decoration: none;">
+                    <i class="fas fa-code"></i> Generate Configuration
+                </a>
+                <a href="/ping" class="btn" style="text-align: center; text-decoration: none; background: #48bb78;">
+                    <i class="fas fa-waveform"></i> Test Connectivity
+                </a>
+                <a href="/compliance" class="btn btn-secondary" style="text-align: center; text-decoration: none;">
+                    <i class="fas fa-shield-alt"></i> Run Security Audit
+                </a>
+                <a href="/backups" class="btn btn-secondary" style="text-align: center; text-decoration: none;">
+                    <i class="fas fa-database"></i> Backup Configurations
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cisco Configuration Commands -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-terminal"></i> Cisco Configuration Commands</h3>
+        <button class="btn btn-small" onclick="copyToClipboard(document.getElementById('cisco-config').innerText)">
+            <i class="fas fa-copy"></i> Copy
+        </button>
+    </div>
+    <div class="card-body">
+        <div id="cisco-config" class="terminal">
+            <pre>! ================================================
+! AutoNet Pro - Cisco Configuration
+! Router-on-a-Stick with Inter-VLAN Routing
+! ================================================
+
+! ROUTER CONFIGURATION
+interface gigabitEthernet 0/0.10
+ encapsulation dot1Q 10
+ ip address 192.168.1.1 255.255.255.0
+ no shutdown
+ 
+interface gigabitEthernet 0/0.20
+ encapsulation dot1Q 20
+ ip address 192.168.2.1 255.255.255.0
+ no shutdown
+ 
+ip routing
+
+! SWITCH CONFIGURATION
+vlan 10
+ name VLAN10
+ 
+vlan 20
+ name VLAN20
+ 
+interface gigabitEthernet 0/1
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20
+ 
+interface gigabitEthernet 0/2
+ switchport mode access
+ switchport access vlan 10
+ 
+interface gigabitEthernet 0/3
+ switchport mode access
+ switchport access vlan 20
+
+! PC CONFIGURATIONS
+PC1: IP 192.168.1.10/24 | Gateway: 192.168.1.1
+PC2: IP 192.168.2.10/24 | Gateway: 192.168.2.1</pre>
+        </div>
+    </div>
+</div>
+
+<script>
+function pingDevice(ip) {
+    window.location.href = '/ping?target=' + ip;
+}
+</script>
+{% endblock %}

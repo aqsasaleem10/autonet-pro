@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="grid-2">
+    <div class="card">
+        <div class="card-header">
+            <h2><i class="fas fa-file-pdf"></i> Generate Report</h2>
+        </div>
+        <div class="card-body">
+            <div class="form-group">
+                <label>Report Type</label>
+                <select id="reportType" class="form-control">
+                    <option>Network Health Summary</option>
+                    <option>Security Compliance Report</option>
+                    <option>Device Inventory Report</option>
+                    <option>Traffic Analysis Report</option>
+                    <option>Configuration Audit Report</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Date Range</label>
+                <div class="grid-2">
+                    <input type="date" id="fromDate" class="form-control" value="2024-03-01">
+                    <input type="date" id="toDate" class="form-control" value="2024-03-31">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Include Sections</label>
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                    <label style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" checked> Executive Summary
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" checked> Device Status Table
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" checked> Traffic Graphs
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox"> Security Audit Results
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox"> Configuration Changes Log
+                    </label>
+                </div>
+            </div>
+            
+            <button class="btn" onclick="generateReport()" style="width: 100%;">
+                <i class="fas fa-file-pdf"></i> Generate PDF Report
+            </button>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h2><i class="fas fa-eye"></i> Report Preview</h2>
+        </div>
+        <div class="card-body" id="reportPreview">
+            <div style="background: white; border-radius: 12px; padding: 20px; color: #1a202c;">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="font-size: 20px; font-weight: bold; color: #667eea;">AutoNet Pro</div>
+                    <div style="color: #718096;">Network Health Summary Report</div>
+                    <div style="font-size: 12px; color: #a0aec0;">Generated: March 2024</div>
+                </div>
+                <div style="border-top: 2px solid #667eea; margin: 16px 0;"></div>
+                <div>
+                    <div style="font-weight: bold; margin-bottom: 12px;">EXECUTIVE SUMMARY</div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                        <span>Total Devices</span>
+                        <span><strong>6</strong></span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                        <span>Network Uptime</span>
+                        <span><strong>99.9%</strong></span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                        <span>Compliance Score</span>
+                        <span><strong>72%</strong></span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+                        <span>Active Alerts</span>
+                        <span><strong>2 Critical</strong></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2><i class="fas fa-history"></i> Recent Reports</h2>
+    </div>
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Report Name</th>
+                    <th>Date Generated</th>
+                    <th>Size</th>
+                    <th>Action</th>
+                 </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Network_Health_Mar2024.pdf</td>
+                    <td>2024-03-31 14:30</td>
+                    <td>245 KB</td>
+                    <td><button class="btn btn-small btn-secondary">Download</button></td>
+                </tr>
+                <tr>
+                    <td>Security_Compliance_Q1.pdf</td>
+                    <td>2024-03-30 10:15</td>
+                    <td>189 KB</td>
+                    <td><button class="btn btn-small btn-secondary">Download</button></td>
+                </tr>
+                <tr>
+                    <td>Device_Inventory_Mar2024.pdf</td>
+                    <td>2024-03-29 09:00</td>
+                    <td>98 KB</td>
+                    <td><button class="btn btn-small btn-secondary">Download</button></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+async function generateReport() {
+    const reportType = document.getElementById('reportType').value;
+    const fromDate = document.getElementById('fromDate').value;
+    const toDate = document.getElementById('toDate').value;
+    
+    showToast('Generating PDF report...', 'info');
+    
+    const response = await fetch('/api/reports/generate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            type: reportType,
+            from_date: fromDate,
+            to_date: toDate
+        })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+        showToast('Report generated successfully!', 'success');
+        // In production, this would trigger a download
+    }
+}
+</script>
+{% endblock %}
